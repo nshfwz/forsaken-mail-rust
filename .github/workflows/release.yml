@@ -31,6 +31,11 @@ jobs:
             binary: forsaken-mail-rust.exe
             asset_name: forsaken-mail-rust-${{ github.ref_name }}-windows-amd64.exe
             chmod: "false"
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            binary: forsaken-mail-rust.exe
+            asset_name: forsaken-mail-rust-${{ github.ref_name }}-windows-arm64.exe
+            chmod: "false"
           - os: macos-15-intel
             target: x86_64-apple-darwin
             binary: forsaken-mail-rust
