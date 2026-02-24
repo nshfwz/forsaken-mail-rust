@@ -1,0 +1,346 @@
+:root {
+  --retro-white: #fafafa;
+  --retro-cream: #f5f3ef;
+  --retro-black: #1a1a1a;
+  --retro-gray-dark: #3a3a3a;
+  --retro-gray-mid: #6b6b6b;
+  --retro-gray-light: #a0a0a0;
+  --retro-border: #2a2a2a;
+  --retro-accent: #e74c3c;
+  --border-width: 2px;
+  --topbar-height: 160px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--retro-black);
+  background-color: var(--retro-white);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--retro-white);
+  border-bottom: var(--border-width) solid var(--retro-border);
+}
+
+.topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: left;
+  line-height: 1.05;
+  color: var(--retro-black);
+  min-width: 200px;
+}
+
+.mailbox-tools {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.mailbox-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mailbox-label {
+  color: var(--retro-gray-mid);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  min-width: 58px;
+}
+
+#mailboxInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 11px;
+  border: var(--border-width) solid var(--retro-border);
+  background: var(--retro-white);
+  color: var(--retro-black);
+  font-size: 14px;
+}
+
+#mailboxInput[readonly] {
+  color: var(--retro-gray-dark);
+  background: #f7f7f7;
+}
+
+#mailboxInput::placeholder {
+  color: var(--retro-gray-light);
+}
+
+#mailboxInput:focus {
+  outline: none;
+  border-color: var(--retro-black);
+  box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.12);
+}
+
+.editor-actions,
+.quick-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: var(--border-width) solid #cccccc;
+  background: transparent;
+  color: var(--retro-gray-mid);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--retro-black);
+  color: var(--retro-black);
+  background: #f3f3f3;
+}
+
+.mailbox-address {
+  color: var(--retro-gray-mid);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  word-break: break-all;
+}
+
+.mailbox-address span {
+  color: var(--retro-black);
+  font-weight: 700;
+  text-transform: none;
+}
+
+.main {
+  min-height: 100vh;
+  padding-top: calc(var(--topbar-height, 160px) + 24px);
+  padding-bottom: 20px;
+  background-image: radial-gradient(var(--retro-gray-light) 0.8px, transparent 0.8px);
+  background-size: 22px 22px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: var(--retro-white);
+  border: var(--border-width) solid var(--retro-border);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--retro-gray-light);
+}
+
+.card-head h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.card-head span {
+  color: var(--retro-gray-mid);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table-wrap {
+  max-height: 430px;
+  overflow: auto;
+}
+
+#mailTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+#mailTable th,
+#mailTable td {
+  border: 1px solid #dddddd;
+  padding: 10px 8px;
+  text-align: left;
+}
+
+#mailTable th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--retro-cream);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#mailTable tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+#mailTable tbody tr:hover {
+  background: #f2f2f2;
+  cursor: pointer;
+}
+
+#mailTable tbody tr.active {
+  background: #e8e8e8;
+}
+
+.content-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tab-btn {
+  border: var(--border-width) solid #d6d6d6;
+  background: var(--retro-white);
+  color: var(--retro-gray-mid);
+  padding: 7px 11px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  border-color: var(--retro-black);
+  background: var(--retro-black);
+  color: var(--retro-white);
+}
+
+.content-view {
+  border: var(--border-width) solid var(--retro-border);
+  background: var(--retro-white);
+}
+
+.view-block {
+  margin: 0;
+  min-height: 300px;
+  max-height: 430px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  color: var(--retro-black);
+}
+
+#htmlView {
+  width: 100%;
+  border: 0;
+}
+
+#jsonView {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.api-card h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.api-card code {
+  display: block;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px dashed var(--retro-gray-light);
+  background: var(--retro-cream);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: var(--retro-gray-dark);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.status-bar {
+  min-height: 20px;
+  color: var(--retro-gray-mid);
+  font-size: 12px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  .topbar-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .brand-title {
+    font-size: 28px;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .mailbox-tools {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .mailbox-toolbar {
+    align-items: stretch;
+  }
+
+  .mailbox-label {
+    min-width: 0;
+  }
+
+  #mailboxInput {
+    min-width: 0;
+  }
+
+  .view-block {
+    min-height: 240px;
+    max-height: 320px;
+  }
+}

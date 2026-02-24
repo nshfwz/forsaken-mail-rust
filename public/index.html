@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="keywords" content="临时邮箱,forsaken mail,disposable mail">
+  <title>Forsaken Mail</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-title">即收即毁</div>
+      <div class="mailbox-tools">
+        <div class="mailbox-toolbar">
+          <span class="mailbox-label">邮箱前缀</span>
+          <input id="mailboxInput" type="text" placeholder="请输入不带后缀邮箱账号" readonly>
+          <div class="editor-actions">
+            <button id="editMailbox" class="icon-btn" title="编辑邮箱前缀" aria-label="编辑邮箱前缀">✎</button>
+            <button id="confirmMailbox" class="icon-btn hidden" title="确认" aria-label="确认">✓</button>
+            <button id="cancelMailbox" class="icon-btn hidden" title="取消" aria-label="取消">✕</button>
+          </div>
+          <div class="quick-actions">
+            <button id="randomMailbox" class="icon-btn" title="随机邮箱" aria-label="随机邮箱">↻</button>
+            <button id="copyAddress" class="icon-btn" title="复制地址" aria-label="复制地址">⧉</button>
+            <button id="refreshMessages" class="icon-btn" title="刷新邮件" aria-label="刷新邮件">↻</button>
+          </div>
+        </div>
+        <div class="mailbox-address">当前邮箱：<span id="currentAddress">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="container">
+      <section class="card">
+        <div class="card-head">
+          <h3>邮件列表</h3>
+          <span id="messageCount">0 封</span>
+        </div>
+        <div class="table-wrap">
+          <table id="mailTable">
+            <thead>
+              <tr>
+                <th>发信人</th>
+                <th>主题</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody id="mailTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h3>我的邮件在哪里？</h3>
+          <span id="messageMeta">等等就来( ͡° ͜ʖ ͡°)</span>
+        </div>
+        <div class="content-tabs">
+          <button class="tab-btn active" data-tab="text">文本</button>
+          <button class="tab-btn" data-tab="html">HTML</button>
+          <button class="tab-btn" data-tab="json">JSON</button>
+        </div>
+        <div class="content-view">
+          <pre id="textView" class="view-block"></pre>
+          <iframe id="htmlView" class="view-block hidden" sandbox=""></iframe>
+          <pre id="jsonView" class="view-block hidden"></pre>
+        </div>
+      </section>
+
+      <section class="card api-card">
+        <h4>API 示例</h4>
+        <code id="apiListExample"></code>
+        <code id="apiDetailExample"></code>
+        <div id="statusBar" class="status-bar"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
