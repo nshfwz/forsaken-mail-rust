@@ -4,6 +4,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use regex::Regex;
 use serde::Serialize;
+use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize)]
@@ -34,6 +35,23 @@ pub struct MessageSummary {
     pub received_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StoreEventType {
+    Added,
+    Deleted,
+    Cleared,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StoreEvent {
+    pub event: StoreEventType,
+    pub mailbox: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message_id: Option<String>,
+    pub at: DateTime<Utc>,
+}
+
 #[derive(Default)]
 struct StoreInner {
     by_mailbox: HashMap<String, Vec<Message>>,
@@ -44,14 +62,17 @@ pub struct Store {
     inner: Arc<RwLock<StoreInner>>,
     max_messages: usize,
     ttl: Duration,
+    events_tx: broadcast::Sender<StoreEvent>,
 }
 
 impl Store {
     pub fn new(max_messages: usize, ttl_minutes: i64) -> Self {
+        let (events_tx, _) = broadcast::channel(1024);
         Self {
             inner: Arc::new(RwLock::new(StoreInner::default())),
             max_messages,
             ttl: Duration::minutes(ttl_minutes.max(1)),
+            events_tx,
         }
     }
 
@@ -69,6 +90,7 @@ impl Store {
             message.mailbox = mailbox.clone();
         }
 
+        let message_id = message.id.clone();
         let mut inner = self.inner.write().await;
         inner
             .by_mailbox
@@ -82,6 +104,13 @@ impl Store {
             self.ttl,
             self.max_messages,
         );
+
+        let _ = self.events_tx.send(StoreEvent {
+            event: StoreEventType::Added,
+            mailbox,
+            message_id: Some(message_id),
+            at: now,
+        });
     }
 
     pub async fn list(&self, mailbox: &str) -> Vec<Message> {
@@ -142,6 +171,64 @@ impl Store {
         }
 
         removed
+    }
+
+    pub async fn delete(&self, mailbox: &str, id: &str) -> bool {
+        let mailbox = mailbox.trim().to_ascii_lowercase();
+        let id = id.trim();
+        if id.is_empty() {
+            return false;
+        }
+
+        let mut inner = self.inner.write().await;
+        let (deleted, mailbox_empty) = {
+            let Some(messages) = inner.by_mailbox.get_mut(&mailbox) else {
+                return false;
+            };
+
+            let before = messages.len();
+            messages.retain(|item| item.id != id);
+            (messages.len() != before, messages.is_empty())
+        };
+
+        if !deleted {
+            return false;
+        }
+
+        if mailbox_empty {
+            inner.by_mailbox.remove(&mailbox);
+        }
+
+        let _ = self.events_tx.send(StoreEvent {
+            event: StoreEventType::Deleted,
+            mailbox,
+            message_id: Some(id.to_string()),
+            at: Utc::now(),
+        });
+
+        true
+    }
+
+    pub async fn clear(&self, mailbox: &str) -> usize {
+        let mailbox = mailbox.trim().to_ascii_lowercase();
+        let mut inner = self.inner.write().await;
+        let removed = inner
+            .by_mailbox
+            .remove(&mailbox)
+            .map_or(0, |items| items.len());
+        if removed > 0 {
+            let _ = self.events_tx.send(StoreEvent {
+                event: StoreEventType::Cleared,
+                mailbox,
+                message_id: None,
+                at: Utc::now(),
+            });
+        }
+        removed
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<StoreEvent> {
+        self.events_tx.subscribe()
     }
 }
 

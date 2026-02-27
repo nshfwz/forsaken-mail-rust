@@ -180,6 +180,17 @@ body {
   letter-spacing: -0.02em;
 }
 
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-actions #messageCount {
+  min-width: 52px;
+  text-align: right;
+}
+
 .card-head span {
   color: var(--retro-gray-mid);
   font-size: 12px;
