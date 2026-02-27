@@ -10,7 +10,7 @@
 
 ## 当前版本
 
-- `1.0.0`
+- `1.1.0`
 
 ## 启动
 
@@ -28,8 +28,11 @@ cargo run --release
 ```bash
 curl "http://127.0.0.1:3000/api/mailboxes/demo/messages"
 curl "http://127.0.0.1:3000/api/mailboxes/demo/messages/{message_id}"
+curl -X DELETE "http://127.0.0.1:3000/api/mailboxes/demo/messages/{message_id}"
+curl -X DELETE "http://127.0.0.1:3000/api/mailboxes/demo/messages"
 curl "http://127.0.0.1:3000/api/messages?email=demo@example.com"
 curl "http://127.0.0.1:3000/api/messages/{message_id}?email=demo@example.com"
+curl "http://127.0.0.1:3000/api/mailboxes/demo/events/next"
 ```
 
 ## 邮件保留策略
@@ -65,7 +68,7 @@ target/release/forsaken-mail-rust
 ## 自动发布 Release
 
 - GitHub Actions 监听 tag：`v*`
-- 推送版本 tag（例如 `v1.0.0`）后会自动：
+- 推送版本 tag（例如 `v1.1.0`）后会自动：
   - 构建多平台二进制（Linux/Windows/macOS Intel/macOS Apple Silicon）
   - 生成 `checksums.txt`
   - 上传到对应 GitHub Release

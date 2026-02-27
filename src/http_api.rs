@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode, Uri};
@@ -9,6 +10,7 @@ use axum::{Json, Router};
 use include_dir::{include_dir, Dir};
 use serde::Deserialize;
 use serde::Serialize;
+use tokio::time::timeout;
 
 use crate::address;
 use crate::config::Config;
@@ -48,15 +50,36 @@ struct DetailResponse {
     message: Message,
 }
 
+#[derive(Debug, Serialize)]
+struct DeleteResponse {
+    mailbox: String,
+    email: String,
+    deleted: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct ClearResponse {
+    mailbox: String,
+    email: String,
+    removed: usize,
+}
+
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health))
         .route("/api/messages", get(list_by_email))
         .route("/api/messages/{id}", get(get_by_email))
-        .route("/api/mailboxes/{mailbox}/messages", get(list_by_mailbox))
+        .route(
+            "/api/mailboxes/{mailbox}/messages",
+            get(list_by_mailbox).delete(clear_mailbox),
+        )
         .route(
             "/api/mailboxes/{mailbox}/messages/{id}",
-            get(get_by_mailbox),
+            get(get_by_mailbox).delete(delete_by_mailbox),
+        )
+        .route(
+            "/api/mailboxes/{mailbox}/events/next",
+            get(next_mailbox_event),
         )
         .fallback(get(serve_embedded_static))
         .with_state(state)
@@ -166,6 +189,65 @@ async fn get_by_mailbox(
     write_message_detail(&state, &mailbox, &id).await
 }
 
+async fn delete_by_mailbox(
+    State(state): State<AppState>,
+    Path((mailbox, id)): Path<(String, String)>,
+) -> Result<Json<DeleteResponse>, ApiError> {
+    let (mailbox, email) =
+        address::normalize_mailbox(&mailbox, &state.cfg.domain).map_err(ApiError::bad_request)?;
+
+    let message_id = id.trim();
+    if message_id.is_empty() {
+        return Err(ApiError::bad_request("missing message id"));
+    }
+
+    let deleted = state.store.delete(&mailbox, message_id).await;
+    Ok(Json(DeleteResponse {
+        mailbox,
+        email,
+        deleted,
+    }))
+}
+
+async fn clear_mailbox(
+    State(state): State<AppState>,
+    Path(mailbox): Path<String>,
+) -> Result<Json<ClearResponse>, ApiError> {
+    let (mailbox, email) =
+        address::normalize_mailbox(&mailbox, &state.cfg.domain).map_err(ApiError::bad_request)?;
+    let removed = state.store.clear(&mailbox).await;
+
+    Ok(Json(ClearResponse {
+        mailbox,
+        email,
+        removed,
+    }))
+}
+
+async fn next_mailbox_event(
+    State(state): State<AppState>,
+    Path(mailbox): Path<String>,
+) -> Result<Response, ApiError> {
+    let (mailbox, _) =
+        address::normalize_mailbox(&mailbox, &state.cfg.domain).map_err(ApiError::bad_request)?;
+
+    let mut receiver = state.store.subscribe();
+    loop {
+        match timeout(Duration::from_secs(25), receiver.recv()).await {
+            Ok(Ok(event)) => {
+                if event.mailbox == mailbox {
+                    return Ok((StatusCode::OK, Json(event)).into_response());
+                }
+            }
+            Ok(Err(tokio::sync::broadcast::error::RecvError::Lagged(_))) => continue,
+            Ok(Err(tokio::sync::broadcast::error::RecvError::Closed)) => {
+                return Err(ApiError::service_unavailable("event stream closed"));
+            }
+            Err(_) => return Ok(StatusCode::NO_CONTENT.into_response()),
+        }
+    }
+}
+
 async fn write_message_list(
     state: &AppState,
     mailbox_input: &str,
@@ -230,6 +312,13 @@ impl ApiError {
     fn not_found(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::NOT_FOUND,
+            message: message.into(),
+        }
+    }
+
+    fn service_unavailable(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
             message: message.into(),
         }
     }

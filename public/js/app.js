@@ -21,6 +21,8 @@
     randomMailboxButton: document.getElementById("randomMailbox"),
     copyAddressButton: document.getElementById("copyAddress"),
     refreshMessagesButton: document.getElementById("refreshMessages"),
+    deleteMessageButton: document.getElementById("deleteMessage"),
+    clearMessagesButton: document.getElementById("clearMessages"),
     currentAddress: document.getElementById("currentAddress"),
     messageCount: document.getElementById("messageCount"),
     mailTableBody: document.getElementById("mailTableBody"),
@@ -35,6 +37,7 @@
   };
 
   let pollTimer = null;
+  let mailboxEventsAbort = null;
 
   function boot() {
     syncTopbarOffset();
@@ -84,6 +87,14 @@
       refreshMessages(false);
     });
 
+    elements.deleteMessageButton.addEventListener("click", () => {
+      deleteCurrentMessage();
+    });
+
+    elements.clearMessagesButton.addEventListener("click", () => {
+      clearCurrentMailbox();
+    });
+
     elements.tabButtons.forEach((button) => {
       button.addEventListener("click", () => switchTab(button.dataset.tab));
     });
@@ -104,6 +115,7 @@
     renderDetail(null);
     renderAPIExamples();
     refreshMessages(false);
+    connectMailboxEvents();
     resetPolling();
     setStatus(`已切换到邮箱 ${state.email}`);
   }
@@ -160,6 +172,52 @@
       window.clearInterval(pollTimer);
     }
     pollTimer = window.setInterval(() => refreshMessages(true), POLL_INTERVAL_MS);
+  }
+
+  function connectMailboxEvents() {
+    if (mailboxEventsAbort) {
+      mailboxEventsAbort.abort();
+      mailboxEventsAbort = null;
+    }
+
+    if (!state.mailbox) {
+      return;
+    }
+
+    const controller = new AbortController();
+    mailboxEventsAbort = controller;
+    consumeMailboxEvents(controller);
+  }
+
+  async function consumeMailboxEvents(controller) {
+    while (!controller.signal.aborted && state.mailbox) {
+      const endpoint = `/api/mailboxes/${encodeURIComponent(state.mailbox)}/events/next`;
+      try {
+        const response = await fetch(endpoint, { cache: "no-store", signal: controller.signal });
+        if (response.status === 204) {
+          continue;
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || `请求失败: ${response.status}`);
+        }
+
+        await refreshMessages(true);
+        if (payload.event === "added") {
+          setStatus("检测到新邮件，已自动刷新。");
+        } else if (payload.event === "deleted") {
+          setStatus("邮件已删除。", false);
+        } else if (payload.event === "cleared") {
+          setStatus("邮箱已清空。", false);
+        }
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        setStatus("实时连接中断，已切换轮询模式。", true);
+        return;
+      }
+    }
   }
 
   async function refreshMessages(isAutoRefresh) {
@@ -232,6 +290,45 @@
 
       tbody.appendChild(row);
     });
+  }
+
+
+  async function deleteCurrentMessage() {
+    if (!state.mailbox || !state.currentMessageID) {
+      setStatus("请先选择一封邮件。", true);
+      return;
+    }
+
+    try {
+      const endpoint = `/api/mailboxes/${encodeURIComponent(state.mailbox)}/messages/${encodeURIComponent(state.currentMessageID)}`;
+      await fetchJSON(endpoint, { method: "DELETE" });
+      state.currentMessageID = "";
+      state.currentMessage = null;
+      await refreshMessages(false);
+      setStatus("已删除当前邮件。");
+    } catch (error) {
+      setStatus(error.message || "删除邮件失败", true);
+    }
+  }
+
+  async function clearCurrentMailbox() {
+    if (!state.mailbox) {
+      return;
+    }
+    if (!window.confirm("确认清空当前邮箱的所有邮件吗？")) {
+      return;
+    }
+
+    try {
+      const endpoint = `/api/mailboxes/${encodeURIComponent(state.mailbox)}/messages`;
+      await fetchJSON(endpoint, { method: "DELETE" });
+      state.currentMessageID = "";
+      state.currentMessage = null;
+      await refreshMessages(false);
+      setStatus("邮箱已清空。");
+    } catch (error) {
+      setStatus(error.message || "清空邮箱失败", true);
+    }
   }
 
   async function loadMessage(messageID) {
@@ -307,8 +404,8 @@
     return `mail${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  async function fetchJSON(url) {
-    const response = await fetch(url, { cache: "no-store" });
+  async function fetchJSON(url, options) {
+    const response = await fetch(url, { cache: "no-store", ...(options || {}) });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(payload.error || `请求失败: ${response.status}`);
@@ -340,6 +437,12 @@
       .replaceAll("\"", "&quot;")
       .replaceAll("'", "&#39;");
   }
+
+  window.addEventListener("beforeunload", () => {
+    if (mailboxEventsAbort) {
+      mailboxEventsAbort.abort();
+    }
+  });
 
   boot();
 })();
